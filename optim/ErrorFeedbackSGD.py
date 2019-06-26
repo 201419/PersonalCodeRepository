@@ -29,8 +29,7 @@ class ErrorFeedbackSGD(Optimizer):
     `On the importance of initialization and momentum in deep learning`__.
     
     Args:
-        params (iterable): iterable of parameters to optimize or dicts defining
-            parameter groups
+        params (iterable): iterable of parameters to optimize or dicts defining parameter groups
         lr (float): learning rate
         momentum (float, optional): momentum factor (default: 0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
@@ -72,12 +71,14 @@ class ErrorFeedbackSGD(Optimizer):
 
     def __init__(self, params, lr=required, momentum=0, dampening=0,
                  weight_decay=0, nesterov=False, comp='scaled_sign', memory=False):
+
         if lr is not required and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if momentum < 0.0:
             raise ValueError("Invalid momentum value: {}".format(momentum))
-        if weight_decay < 0.0:
+        if weight_decay < 0.0:  # 默认为零
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
+
         if comp == 'scaled_sign':
             comp = scaled_sign
         elif comp == 'sign':
@@ -85,19 +86,18 @@ class ErrorFeedbackSGD(Optimizer):
         elif not callable(comp) and comp is not None:
             raise ValueError("Invalid comp value: {} (must be callable or None)".format(comp))
 
-        defaults = dict(lr=lr, momentum=momentum, dampening=dampening,
-                        weight_decay=weight_decay, nesterov=nesterov,
-                        comp=comp, memory=memory)
+        defaults = dict(lr=lr, momentum=momentum, dampening=dampening, weight_decay=weight_decay, 
+                        nesterov=nesterov, comp=comp, memory=memory)
 
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
+
         super(ErrorFeedbackSGD, self).__init__(params, defaults)
 
         for group in self.param_groups:
             for p in group['params']:
                 param_state = self.state[p]
                 param_state['memory'] = torch.zeros_like(p.data)
-
                 # To compute the gradients norms ratios over time
                 param_state['dim'] = p.nelement()
                 param_state['gradient'] = None
@@ -112,13 +112,13 @@ class ErrorFeedbackSGD(Optimizer):
         """Performs a single optimization step.
         
         Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
+            closure (callable, optional): A closure that reevaluates the model and returns the loss.
         """
         loss = None
         if closure is not None:
             loss = closure()
 
+        # 下边是双重循环
         for group in self.param_groups:
             weight_decay = group['weight_decay']
             momentum = group['momentum']
@@ -131,42 +131,45 @@ class ErrorFeedbackSGD(Optimizer):
                 param_state = self.state[p]
                 if p.grad is None:
                     continue
-                d_p = p.grad.data
+                d_p = p.grad.data  # 梯度值
+
+                # 判断 weight_decay 、momentum 和 nesterov 是否被使用
                 if weight_decay != 0:
-                    d_p.add_(weight_decay, p.data)
+                    d_p.add_(weight_decay, p.data)  # 权重衰减 d_p = d_p + weight_decay * p.data
                 if momentum != 0:
-                    if 'momentum_buffer' not in param_state:
+                    if 'momentum_buffer' not in param_state:  # momentum_buffer
                         buf = param_state['momentum_buffer'] = torch.zeros_like(p.data)
-                        buf.mul_(momentum).add_(d_p)
+                        buf.mul_(momentum).add_(d_p)  # buf = buf * momentum + d_p
                     else:
                         buf = param_state['momentum_buffer']
-                        buf.mul_(momentum).add_(1 - dampening, d_p)
-                    if nesterov:
-                        d_p = d_p.add(momentum, buf)
+                        buf.mul_(momentum).add_(1 - dampening, d_p)  # buf = buf * momentum + (1 - dampening) * d_p
+                    if nesterov:  # nesterov
+                        d_p = d_p.add(momentum, buf)  # d_p = d_p + buf * momentum
                     else:
-                        d_p = buf
+                        d_p = buf  # d_p = buf
 
                 # d_p corresponds to g in alg. 1 from the paper.
                 param_state['gradient'] = d_p  # Save the gradient so its norm can be computed later
 
-                d_p = group['lr'] * d_p
-                corrected_gradient = param_state['memory'] + d_p
-
+                d_p = group['lr'] * d_p  # 学习率 乘以 梯度值 =>  \lambda * g_t 
+                
+                corrected_gradient = param_state['memory'] + d_p  # 相当于 =>  (\lambda * g_t) + (e_t)
                 # Save the corrected gradient to compute the norms
                 param_state['corrected_gradient'] = corrected_gradient
 
-                if comp is not None:
+                # 使用 scaled_sign 或者 sign
+                if comp is not None:  # 计算 \delta_t
                     corrected_gradient = comp(corrected_gradient)
-
                 ''' hack to scale the signed gradient by the learning
                     rate since torch.sign(x) ignores the learning rate '''
-                if comp == unscaled_sign:
-                    corrected_gradient = group['lr'] * corrected_gradient
+                if comp == unscaled_sign:  # 计算 \delta_t
+                    corrected_gradient = group['lr'] * corrected_gradient  # 此时 p_t 已经被 comp
 
-                if memory:
+                if memory:  # 存储 e_(t+1)
                     param_state['memory'] = param_state['memory'] + d_p - corrected_gradient
+                    # e_(t+1) = \delta_t - p_t = e_t + \lambda * g_t - p_t
 
-                p.data.add_(-1, corrected_gradient)
+                p.data.add_(-1, corrected_gradient)  # x_t+1 = x_t - \delta_t
 
         return loss
 
