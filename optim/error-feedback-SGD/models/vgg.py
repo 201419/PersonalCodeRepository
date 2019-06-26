@@ -33,8 +33,8 @@ class VGG(nn.Module):
             else:
                 if self.batch_norm:
                     layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
-                           nn.BatchNorm2d(x),
-                           nn.ReLU(inplace=True)]
+                                nn.BatchNorm2d(x),
+                                nn.ReLU(inplace=True)]
                 else:
                     layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
                            nn.ReLU(inplace=True)]

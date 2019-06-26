@@ -147,7 +147,8 @@ def create_optimizer(net, comp, memory, noscale, lr=0.1, momentum=0.9, weight_de
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
     return optimizer
 
-# --------------------------------------------
+
+# -------------------------------------------------------
 
 def train(net, trainloader, device, optimizer, criterion, memory_back=False):
     """One epoch training of a network.
@@ -157,11 +158,12 @@ def train(net, trainloader, device, optimizer, criterion, memory_back=False):
     :param device: Either 'cuda' or 'cpu'
     :param optimizer: The used optimizer.
     :param criterion: The loss function.
-    :param memory_back: Whether or not for each batch the memory of the optimizer (if it has one) should be
-    temporarily added back to the net's parameters to compute the several metrics with these new parameters.
-    It doesn't change the final net's parameters.
-    :return: (train_loss, train_acc, train_loss_with_memory_back, train_acc_with_memory_back, L1/L2 norm ratio
-              of the gradients, L1/L2 norm ratio of g)
+    :param memory_back: Whether or not for each batch the memory of the optimizer (if it has one) should be 
+                        temporarily added back to the net's parameters to compute the several metrics 
+                        with these new parameters. It doesn't change the final net's parameters.
+    
+    :return:    (train_loss, train_acc, train_loss_with_memory_back, train_acc_with_memory_back, 
+                L1/L2 norm ratio of the gradients, L1/L2 norm ratio of g)
     """
     net.train()
     train_loss = 0
@@ -171,6 +173,10 @@ def train(net, trainloader, device, optimizer, criterion, memory_back=False):
     total = 0
     norm_ratio_val = 0
     corrected_norm_ratio_val = 0
+
+    # -------------------------------------
+    # Loop for training
+    # -------------------------------------
     for batch_idx, (inputs, targets) in enumerate(trainloader):
         inputs, targets = inputs.to(device), targets.to(device)
 
@@ -182,6 +188,7 @@ def train(net, trainloader, device, optimizer, criterion, memory_back=False):
                 _, predicted = outputs.max(1)
                 mback_correct += predicted.eq(targets).sum().item()
 
+        # train using optimizer
         optimizer.zero_grad()
         outputs = net(inputs)
         loss = criterion(outputs, targets)
@@ -190,10 +197,10 @@ def train(net, trainloader, device, optimizer, criterion, memory_back=False):
         norm_ratio_val += optimizer.gradient_norms_ratio()
         corrected_norm_ratio_val += optimizer.corrected_gradient_norms_ratio()
 
-        train_loss += loss.item()
+        train_loss += loss.item()  # loss value
         _, predicted = outputs.max(1)
         total += targets.size(0)
-        correct += predicted.eq(targets).sum().item()
+        correct += predicted.eq(targets).sum().item()  # acc value
 
         progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
                      % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
@@ -213,9 +220,10 @@ def test(net, testloader, device, optimizer, criterion, memory_back=False):
     :param device: Either 'cuda' or 'cpu'
     :param optimizer: The used optimizer.
     :param criterion: The loss function.
-    :param memory_back: Whether or not for each batch the memory of the optimizer (if it has one) should be
-    temporarily added back to the net's parameters to compute the several metrics with these new parameters.
-    It doesn't change the final net's parameters.
+    :param memory_back: Whether or not for each batch the memory of the optimizer (if it has one) should be 
+                        temporarily added back to the net's parameters to compute the several metrics 
+                        with these new parameters. It doesn't change the final net's parameters.
+    
     :return: (train_loss, train_acc, train_loss_with_memory_back, train_acc_with_memory_back)
     """
     net.eval()
@@ -224,6 +232,10 @@ def test(net, testloader, device, optimizer, criterion, memory_back=False):
     correct = 0
     mback_correct = 0
     total = 0
+
+    # -------------------------------------
+    # Loop for testing
+    # -------------------------------------
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
             inputs, targets = inputs.to(device), targets.to(device)
@@ -253,6 +265,8 @@ def test(net, testloader, device, optimizer, criterion, memory_back=False):
     return loss, acc, mback_test_loss / (batch_idx + 1), 100. * mback_correct / total
 
 
+# -------------------------------------------------------
+
 def write_results(args, res):
     """Write recorded training metrics to files.
     
@@ -263,6 +277,7 @@ def write_results(args, res):
     directory = './results/' + name
     print('Writing results ({})..'.format(name))
     make_directory(directory)
+
     save_obj(res['train_losses'], directory + '/train_losses')
     save_obj(res['train_accuracies'], directory + '/train_accuracies')
     save_obj(res['test_losses'], directory + '/test_losses')
@@ -277,9 +292,8 @@ def write_results(args, res):
     if args['norm_ratio']:
         save_obj(res['gradient_norm_ratios'], directory + '/gradient_norm_ratios')
         save_obj(res['corrected_norm_ratios'], directory + '/corrected_norm_ratios')
-    open_mode = 'w'
-    if args['resume']:
-        open_mode = 'a'
+
+    open_mode = 'a' if args['resume'] else 'w'
     with open(directory + '/README.md', open_mode) as file:
         if args['resume']:
             file.write('\n')
@@ -312,6 +326,7 @@ def construct_and_train(name='last_model', dataset='cifar10', model='vgg', resum
     args = dict(name=name, dataset=dataset, model=model, resume=resume, epochs=epochs,
                 lr=lr, batch_size=batch_size, momentum=momentum, weight_decay=weight_decay,
                 comp=comp, noscale=noscale, memory=memory, mnorm=mnorm, mback=mback, norm_ratio=norm_ratio)
+
     trainloader, testloader, num_classes = load_data(dataset, batch_size)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     net = build_model(device, model, num_classes)
@@ -320,6 +335,7 @@ def construct_and_train(name='last_model', dataset='cifar10', model='vgg', resum
     if resume:
         start_epoch, best_acc = load_checkpoint(net, name)
 
+    # 创建 优化器 和 损失函数
     optimizer = create_optimizer(net, comp, memory, noscale, lr=lr, momentum=momentum, weight_decay=weight_decay)
     criterion = nn.CrossEntropyLoss()
 
@@ -334,44 +350,55 @@ def construct_and_train(name='last_model', dataset='cifar10', model='vgg', resum
                memory_back_test_accuracies=[],
                gradient_norm_ratios=[],
                corrected_norm_ratios=[])
-    if resume:
+    if resume:  # 恢复备份
         path = './results/' + name
         res['train_losses'] = load_obj(path + '/train_losses')
         res['train_accuracies'] = load_obj(path + '/train_accuracies')
         res['test_losses'] = load_obj(path + '/test_losses')
         res['test_accuracies'] = load_obj(path + '/test_accuracies')
-        if mback:
+        if mback:  # default = False
             res['memory_back_train_losses'] = load_obj(path + '/memory_back_train_losses')
             res['memory_back_train_accuracies'] = load_obj(path + '/memory_back_train_accuracies')
             res['memory_back_test_losses'] = load_obj(path + '/memory_back_test_losses')
             res['memory_back_test_accuracies'] = load_obj(path + '/memory_back_test_accuracies')
-        if mnorm:
+        if mnorm:  # default = False
             res['memory_norms'] = load_obj(path + '/memory_norms')
-        if norm_ratio:
+        if norm_ratio:  # default = False
             res['gradient_norm_ratios'] = load_obj(path + '/gradient_norm_ratios')
             res['corrected_norm_ratios'] = load_obj(path + '/corrected_norm_ratios')
     try:
-        for epoch in range(start_epoch, start_epoch + epochs):
+        for epoch in range(start_epoch, start_epoch + epochs):  # 默认 epochs 为 200
             print('\nEpoch: %d' % epoch)
+
+            # -------------------------------------
+            # train and test
+            # -------------------------------------
             train_loss, train_acc, mback_train_loss,\
                 mback_train_acc, norm_ratio_val, corrected_norm_ratio_val = train(net, trainloader, device, optimizer,
                                                                                   criterion, memory_back=mback)
             test_loss, test_acc, mback_test_loss, mback_test_acc = test(net, testloader, device, optimizer,
                                                                         criterion, memory_back=mback)
+            # -------------------------------------
+            # save some variables
+            # -------------------------------------
             res['train_losses'].append(train_loss)
             res['train_accuracies'].append(train_acc)
             res['test_losses'].append(test_loss)
             res['test_accuracies'].append(test_acc)
-            if mback:
+            if mback:  # default = False
                 res['memory_back_train_losses'].append(mback_train_loss)
                 res['memory_back_train_accuracies'].append(mback_train_acc)
                 res['memory_back_test_losses'].append(mback_test_loss)
                 res['memory_back_test_accuracies'].append(mback_test_acc)
-            if mnorm:
+            if mnorm:  # default = False
                 res['memory_norms'].append(optimizer.memory_norm())
-            if norm_ratio:
+            if norm_ratio:  # default = False
                 res['gradient_norm_ratios'].append(norm_ratio_val)
                 res['corrected_norm_ratios'].append(corrected_norm_ratio_val)
+            
+            # -------------------------------------
+            # save best 'net' and 'acc' 'epoch'
+            # -------------------------------------
             if test_acc > best_acc:
                 print('Saving..')
                 state = {
@@ -393,16 +420,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch ef-signSGD experiments')
     parser.add_argument('--name', default='last_model', type=str, help='checkpoint name (default last_model)')
     parser.add_argument('--dataset', default='cifar10', type=str, help='Dataset (cifar 10 or 100)')
-    parser.add_argument('--model', default='vgg', type=str, help='Model architecture')
+    parser.add_argument('--model',   default='vgg',     type=str, help='Model architecture')
     parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-    parser.add_argument('--epochs', default=200, type=int, help='number of epochs')
-    parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
-    parser.add_argument('--bs', default=128, type=int, help='batch size')
-    parser.add_argument('--momentum', default=0.9, type=float, help='SGD momentum')
+    parser.add_argument('--epochs', default=200, type=int,   help='number of epochs')
+    parser.add_argument('--lr',     default=0.1, type=float, help='learning rate')
+    parser.add_argument('--bs',     default=128, type=int,   help='batch size')
+    parser.add_argument('--momentum',     default=0.9,  type=float, help='SGD momentum')
     parser.add_argument('--weight_decay', default=5e-4, type=float, help='SGD weight decay')
-    parser.add_argument('--comp', action='store_true', help='apply the scaled sign compression operator')
+    parser.add_argument('--comp',    action='store_true', help='apply the scaled sign compression operator')
     parser.add_argument('--noscale', action='store_true', help='apply only the sign compression operator')
-    parser.add_argument('--memory', action='store_true', help='add a memory to the optimizer')
+    parser.add_argument('--memory',  action='store_true', help='add a memory to the optimizer')
     parser.add_argument('--mnorm', action='store_true', help='computes the norm of the memory at each epoch')
     parser.add_argument('--mback', action='store_true', help='computes the train/test losses/accuracies by adding the'
                                                              'memory back')
