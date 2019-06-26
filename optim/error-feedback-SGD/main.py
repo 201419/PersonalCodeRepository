@@ -26,7 +26,7 @@ from utils.pickle import save_obj, load_obj, make_directory, make_file_directory
 
 def load_data(dataset='cifar10', batch_size=128):
     """
-    Loads the required dataset
+    Loads the required dataset —— 加载数据集
     :param dataset: Can be either 'cifar10' or 'cifar100'
     :param batch_size: The desired batch size
     :return: Tuple (train_loader, test_loader, num_classes)
@@ -63,7 +63,9 @@ def load_data(dataset='cifar10', batch_size=128):
 
 
 def build_model(device, model_name, num_classes=10):
-    """
+    """构建模型：vgg、vggnonorm、resnet、preactresnet、googlenet、densenet、
+                resnext、mobilenet、mobilenetv2、dpn、shufflenetg2、senet、shufflenetv2
+
     :param device: 'cuda' if you have a GPU, 'cpu' otherwise
     :param model_name: One of the models available in the folder 'models'
     :param num_classes: 10 or 100 depending on the chosen dataset
@@ -108,8 +110,7 @@ def build_model(device, model_name, num_classes=10):
 
 
 def load_checkpoint(net, name):
-    """
-    Load saved weights to a given net.
+    """Load saved weights to a given net.
     """
     print('==> Resuming from checkpoint..')
     if not os.path.isdir('checkpoints'):
@@ -122,7 +123,8 @@ def load_checkpoint(net, name):
 
 
 def create_optimizer(net, comp, memory, noscale, lr=0.1, momentum=0.9, weight_decay=5e-4):
-    """
+    """优化器：ErrorFeedbackSGD 和 SGD
+
     Creates the right optimizer regarding to the parameters and attach it to the net's parameters.
     :param net: The net to optimize.
     :param comp: Bool (True = scaled sign compression, False = no comp)
@@ -145,10 +147,11 @@ def create_optimizer(net, comp, memory, noscale, lr=0.1, momentum=0.9, weight_de
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
     return optimizer
 
+# --------------------------------------------
 
 def train(net, trainloader, device, optimizer, criterion, memory_back=False):
-    """
-    One epoch training of a network.
+    """One epoch training of a network.
+    
     :param net: The given network.
     :param trainloader: Pytorch DataLoader (train set)
     :param device: Either 'cuda' or 'cpu'
@@ -203,8 +206,8 @@ def train(net, trainloader, device, optimizer, criterion, memory_back=False):
 
 
 def test(net, testloader, device, optimizer, criterion, memory_back=False):
-    """
-    One test evaluation of a network.
+    """One test evaluation of a network.
+    
     :param net: The given network.
     :param testloader: Pytorch DataLoader (train set)
     :param device: Either 'cuda' or 'cpu'
@@ -251,8 +254,8 @@ def test(net, testloader, device, optimizer, criterion, memory_back=False):
 
 
 def write_results(args, res):
-    """
-    Write recorded training metrics to files.
+    """Write recorded training metrics to files.
+    
     :param args: Training args.
     :param res: Results of the training.
     """
@@ -287,8 +290,9 @@ def write_results(args, res):
 def construct_and_train(name='last_model', dataset='cifar10', model='vgg', resume=False, epochs=100,
                         lr=0.1, batch_size=128, momentum=0.9, weight_decay=5e-4,
                         comp=False, noscale=False, memory=False, mnorm=False, mback=False, norm_ratio=False):
-    """
-    Constructs a network, trains it, and optionally saves the results.
+    
+    """Constructs a network, trains it, and optionally saves the results.
+    
     :param name: Model name (using for saving)
     :param dataset: Either 'cifar10' or 'cifar100'
     :param model: Either 'vgg' or 'resnet'
