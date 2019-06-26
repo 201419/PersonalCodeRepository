@@ -181,7 +181,7 @@ def train(net, trainloader, device, optimizer, criterion, memory_back=False):
         inputs, targets = inputs.to(device), targets.to(device)
 
         if memory_back:
-            with TemporarilyAddMemory(optimizer):
+            with TemporarilyAddMemory(optimizer):  # import convex_opt
                 outputs = net(inputs)
                 loss = criterion(outputs, targets)
                 mback_train_loss += loss.item()

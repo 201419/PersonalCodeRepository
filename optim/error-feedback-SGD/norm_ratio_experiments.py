@@ -11,8 +11,9 @@ base_folder = 'norm_ratio_experiments/'
 
 
 def run_experiment(model, dataset, optimizer, prefix='', batch_size=128):
-    base_name = base_folder + 'batchsize-' + str(batch_size) + '/' \
-                + prefix + get_experiment_name(model, dataset, optimizer)
+
+    base_name = base_folder + 'batchsize-' + str(batch_size) + '/' + prefix \
+                + get_experiment_name(model, dataset, optimizer)
 
     hyperparameters = get_experiment_hyperparameters(model, dataset, optimizer)
     momentum = hyperparameters['momentum']
@@ -24,12 +25,16 @@ def run_experiment(model, dataset, optimizer, prefix='', batch_size=128):
     mback = hyperparameters['mback']
     norm_ratio = True
 
-    num_epochs = [100, 50, 50]
+    num_epochs = [100, 50, 50]  # total 200 epochs
 
     resume = False
     name = base_name + '/'
+
+    # find better learning_rate
     lr = get_tuned_learning_rate(model, dataset, optimizer) * batch_size / 128
     print('Tuned lr : {}'.format(lr))
+    
+    # train model
     for epochs in num_epochs:
         construct_and_train(name=name, dataset=dataset, model=model, resume=resume, epochs=epochs,
                             lr=lr, batch_size=batch_size, momentum=momentum, weight_decay=weight_decay,

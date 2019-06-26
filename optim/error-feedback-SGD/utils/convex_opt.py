@@ -24,7 +24,7 @@ def scaled_sign(x):
 
 
 def unscaled_sign(x):
-        return np.sign(x)
+    return np.sign(x)
 
 
 class TemporarilyAddMemory:
@@ -32,6 +32,8 @@ class TemporarilyAddMemory:
         self.optimizer = optimizer
 
     def __enter__(self):
+        """Triggers the operation when `with` starts running
+        """
         for group in self.optimizer.param_groups:
             for p in group['params']:
                 param_state = self.optimizer.state[p]
@@ -107,9 +109,15 @@ def train_model(x_train, y_train, x_test=None, y_test=None, optimizer=None, loss
     gradients_list = []
     if batch_size <= 0:
         batch_size = x_train.shape[0]
+    
+    # -------------------------------------
+    # Loop for training
+    # -------------------------------------
     for epoch in range(epochs):
         train_loss = 0
-        nb_corrects = 0
+        # nb_corrects = 0
+
+        # loop for training each batch
         for (batch_x, batch_y) in next_batch(x_train, y_train, batch_size):
             preds = batch_x@w
             gradient = optimizer.step(batch_x, batch_y, preds)
@@ -124,6 +132,7 @@ def train_model(x_train, y_train, x_test=None, y_test=None, optimizer=None, loss
             else:
                 corrected_preds = preds
             train_loss += loss.compute_loss(corrected_preds, batch_y)
+        
         train_losses.append(train_loss/x_train.shape[0])
         if x_test is not None and y_test is not None:
             if fully_corrective:

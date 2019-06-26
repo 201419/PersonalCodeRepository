@@ -16,11 +16,12 @@ batch_size = 128
 
 
 def get_tuned_learning_rate(model, dataset, optimizer):
-    """
-    Returns the learning rate for the given experiment once the tuning has been made.
+    """Returns the learning rate for the given experiment once the tuning has been made.
+    
     :param model: 'vgg', 'vggnonorm', 'resnet' or 'lstm'
     :param dataset: 'cifar10' or 'cifar100'
     :param optimizer: 'sgdm', 'ssgd' or 'sssgd'
+    
     :return: lr
     """
     name = base_folder + get_experiment_name(model, dataset, optimizer)
@@ -30,10 +31,11 @@ def get_tuned_learning_rate(model, dataset, optimizer):
 
 
 def tune_learning_rate(model, dataset, optimizer, base_name=None):
-    """
-    Tune the learning rate for a given experiment (batch size 128)
+    """Tune the learning rate for a given experiment (batch size 128)
+    
     The results are saved in base_folder + experiment_name if base_name is None,
     or in base_folder + base_name otherwise
+    
     :param model: 'vgg', 'vggnonorm', 'resnet' or 'lstm'
     :param dataset: 'cifar10' or 'cifar100'
     :param optimizer: 'sgdm', 'ssgd' or 'sssgd'
@@ -59,7 +61,9 @@ def tune_learning_rate(model, dataset, optimizer, base_name=None):
 
     losses = []
     # lr_space = np.logspace(-5, 1, 9)
-    lr_space = np.logspace(-7, -1, 9)
+    lr_space = np.logspace(-7, -1, 9)  # searchspace
+
+    # Exhaustive search
     for index, lr in enumerate(lr_space):
         name = base_name + 'lr' + str(index)
         res = construct_and_train(name=name, dataset=dataset, model=model, resume=False, epochs=num_epochs,
@@ -67,9 +71,12 @@ def tune_learning_rate(model, dataset, optimizer, base_name=None):
                                   comp=comp, noscale=noscale, memory=memory, mnorm=mnorm, mback=mback)
         best_loss = np.nanmin(res['test_losses'])
         losses.append(best_loss)
+
+    # save tuned learning_rate
     losses = np.array(losses)
     save_obj(lr_space, './results/' + base_name + 'lr_space')
     save_obj(losses, './results/' + base_name + 'losses')
+
     with open('./results/' + base_name + 'README.md', 'w') as file:
         file.write('Best learning rate : {}\\\n'.format(lr_space[np.nanargmin(losses)]))
         file.write('Best loss reached over {0} epochs : {1}\n'.format(num_epochs, np.nanmin(losses)))
