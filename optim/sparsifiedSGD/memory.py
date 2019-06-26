@@ -6,6 +6,7 @@ import qsgd
 Gradient memory module
 
 Keep unused gradient in memory and use them later.
+
 Can be used with random or top k sparsifier.
 """
 

@@ -26,7 +26,7 @@ class BaseLogistic:
         w = self.w_estimate if self.w_estimate is not None else self.w
         w = w.copy()
         p = self.params
-        loss = np.sum(np.log(1 + np.exp(-y * (X @ w)))) / X.shape[0]
+        loss = np.sum(np.log(1 + np.exp(-y * (X @ w)))) / X.shape[0]  # `@` represents Inner product
         if p.regularizer:
             loss += p.regularizer * np.square(w).sum() / 2
         return loss

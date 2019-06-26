@@ -18,8 +18,8 @@ LOSS_PER_EPOCH = 10
 
 
 class LogisticParallelSGD(BaseLogistic):
-    """
-    2 classes logistic regression on dense dataset.
+    """2 classes logistic regression on dense dataset.
+    
     X: (num_samples, num_features)
     y: (num_features, ) 0, 1 labels
     """
@@ -114,7 +114,7 @@ class LogisticParallelSGD(BaseLogistic):
                 results['iteration'] = iteration
                 results['timing'] = time.time() - start_time
 
-        with mp.Manager() as manager:
+        with mp.Manager() as manager:  # multiprocessing -----------------------------------
             results = manager.dict()
             stopper = manager.Value('b', False)
 
@@ -134,10 +134,9 @@ class LogisticParallelSGD(BaseLogistic):
                 X_w = sharedctypes.RawArray('d', np.ravel(X))
                 y_w = sharedctypes.RawArray('d', y)
 
+            # ------- multiprocessing -------
             processes = [mp.Process(target=worker_fit,
-                                    args=(
-                                        i, p.n_cores, X_w, y_w, weights_w, X.shape, indices, results, self.params,
-                                        stopper))
+                                    args=(i, p.n_cores, X_w, y_w, weights_w, X.shape, indices, results, self.params, stopper))
                          for i in range(p.n_cores)]
 
             for p in processes:
@@ -203,7 +202,7 @@ class LogisticParallelSGD(BaseLogistic):
                 else:
                     weights_w += lr_minus_grad
 
-        with mp.Manager() as manager:
+        with mp.Manager() as manager:  # multiprocessing -----------------------------------
             counter = mp.Value('i', 0)
             start_barrier = manager.Barrier(p.n_cores + 1)  # wait all worker and the monitor to be ready
 
@@ -224,6 +223,7 @@ class LogisticParallelSGD(BaseLogistic):
                 X_w = sharedctypes.RawArray('d', np.ravel(X))
                 y_w = sharedctypes.RawArray('d', y)
 
+            # ------- multiprocessing -------
             processes = [mp.Process(target=worker_fit,
                                     args=(
                                         i, p.n_cores, X_w, y_w, weights_w, X.shape, indices, counter, start_barrier,
@@ -239,7 +239,7 @@ class LogisticParallelSGD(BaseLogistic):
 
             # loss computing on another thread through the queue
             stop = manager.Value('b', False)
-            w_queue = mp.Queue()
+            w_queue = mp.Queue()  # multiprocessing -----------------------------------
             results = manager.dict()
 
             def loss_computer(q, regularizer, res, stop):  # should be stoppable
@@ -273,6 +273,7 @@ class LogisticParallelSGD(BaseLogistic):
             start_barrier.wait()
             start_time = time.time()
 
+            # ------- multiprocessing -------
             loss_computer = mp.Process(target=loss_computer, args=(w_queue, self.params.regularizer, results, stop))
             loss_computer.start()
 

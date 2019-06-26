@@ -25,7 +25,6 @@ class LogisticSGD(BaseLogistic):
     def fit(self, X, y):
         num_samples, num_features = X.shape
         p = self.params
-
         losses = np.zeros(p.num_epoch + 1)
 
         if self.w is None:
@@ -37,7 +36,7 @@ class LogisticSGD(BaseLogistic):
         shuffled_indices = np.arange(num_samples)
 
         # epoch 0 loss evaluation
-        losses[0] = self.loss(X, y)
+        losses[0] = self.loss(X, y)  # Logistic's loss
 
         train_start = time.time()
 
@@ -46,31 +45,30 @@ class LogisticSGD(BaseLogistic):
 
         started = time.time()
 
+        # -------------------------------------
+        # Loop for training 
+        # -------------------------------------
         for epoch in np.arange(p.num_epoch):
             np.random.shuffle(shuffled_indices)
 
             for iteration in range(num_samples):
                 t = epoch * num_samples + iteration
+
                 if t % compute_loss_every == 0:
                     loss = self.loss(X, y)
                     print('{} t {} epoch {} iter {} loss {} elapsed {}s'.format(p, t, epoch, iteration, loss, time.time() - started))
                     all_losses[t // compute_loss_every] = loss
 
                 sample_idx = shuffled_indices[iteration]
-
                 lr = self.lr(epoch, iteration, num_samples, num_features)
-
                 x = X[sample_idx]
-
                 minus_grad = y[sample_idx] * x * sigmoid(-y[sample_idx] * x.dot(self.w).squeeze())
-                if isspmatrix(x):
+                if isspmatrix(x):  # Is x of a sparse matrix type ?
                     minus_grad = minus_grad.toarray().squeeze(0)
                 if p.regularizer:
                     minus_grad -= p.regularizer * self.w
-
                 lr_minus_grad = memory(lr * minus_grad)
                 self.w += lr_minus_grad
-
                 self.update_estimate(t)
 
             losses[epoch + 1] = self.loss(X, y)

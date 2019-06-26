@@ -31,7 +31,7 @@ def run_experiment(directory, dataset_pickle, params, nproc=None):
         X, y = pickle.load(f)
 
     print('start experiment')
-    with mp.Pool(nproc) as pool:
+    with mp.Pool(nproc) as pool:  # multiprocessing
         results = pool.map(run_logistic, params)
 
     pickle_it(results, 'results', directory)
@@ -44,11 +44,11 @@ def run_parallel_experiment(directory, dataset_pickle, models, cores, baseline, 
     pickle_it([m(1) for m in models], 'models', directory)
     pickle_it(cores, 'cores', directory)
 
-    print('load dataset')
+    print('load dataset ...')
     with open(dataset_pickle, 'rb') as f:
         X, y = pickle.load(f)
 
-    print('start experiment')
+    print('start experiment ...')
 
     chronos = np.zeros((len(models), len(cores), repeat))
     stop_times = np.zeros((len(models), len(cores), repeat), dtype=int)
